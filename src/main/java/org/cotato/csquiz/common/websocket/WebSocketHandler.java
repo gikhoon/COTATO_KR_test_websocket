@@ -1,6 +1,10 @@
 package org.cotato.csquiz.common.websocket;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.UUID;
+import org.cotato.csquiz.api.quiz.dto.QuizResponse;
 import org.cotato.csquiz.api.socket.dto.CsQuizStopResponse;
 import org.cotato.csquiz.api.socket.dto.EducationResultResponse;
 import org.cotato.csquiz.api.socket.dto.QuizStartResponse;
@@ -18,6 +22,7 @@ import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.cotato.csquiz.domain.education.service.QuizService;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -41,13 +46,15 @@ public class WebSocketHandler extends TextWebSocketHandler {
     private static final CloseStatus ATTEMPT_NEW_CONNECTION = new CloseStatus(4001, "new connection request");
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final QuizRepository quizRepository;
+    private final QuizService quizService;
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws IOException {
-        String memberId = findAttributeByToken(session, MEMBER_ID_KEY);
+//        String memberId = findAttributeByToken(session, MEMBER_ID_KEY);
+        String memberId = UUID.randomUUID().toString();
         Long educationId = Long.parseLong(findAttributeByToken(session, EDUCATION_ID_KEY));
         String role = findAttributeByToken(session, ROLE_KEY);
-        MemberRole memberRole = MemberRole.fromKey(role);
+        MemberRole memberRole = MemberRole.MEMBER;
 
         if (MemberRoleGroup.hasRole(MemberRoleGroup.CLIENTS, memberRole)) {
             handleSessionReplacement(memberId, CLIENTS);
@@ -78,6 +85,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
         QuizStatusResponse response = maybeQuiz.map(quiz -> QuizStatusResponse.builder()
                         .command(SHOW_COMMAND)
+                        .sendTime(LocalDateTime.now().toString())
                         .quizId(quiz.getId())
                         .status(quiz.getStatus())
                         .start(quiz.getStart())
@@ -90,20 +98,24 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        String memberId = findAttributeByToken(session, MEMBER_ID_KEY);
-        String roleAttribute = findAttributeByToken(session, ROLE_KEY);
-        MemberRole memberRole = MemberRole.fromKey(roleAttribute);
-
-        if (MemberRoleGroup.hasRole(MemberRoleGroup.CLIENTS, memberRole)) {
-            CLIENTS.remove(memberId);
-        } else {
-            MANAGERS.remove(memberId);
-        }
-        log.info("[세션 종료] {}, 종료 코드: {}", memberId, status);
+//        String memberId = findAttributeByToken(session, MEMBER_ID_KEY);
+//        String roleAttribute = findAttributeByToken(session, ROLE_KEY);
+//        MemberRole memberRole = MemberRole.fromKey(roleAttribute);
+//
+//        if (MemberRoleGroup.hasRole(MemberRoleGroup.CLIENTS, memberRole)) {
+//            CLIENTS.remove(memberId);
+//        } else {
+//            MANAGERS.remove(memberId);
+//        }
+        log.info("[세션 종료] , 종료 코드: {}", status);
     }
 
     public void accessQuiz(Long quizId) {
+        LocalDateTime now = LocalDateTime.now();
+        QuizResponse quizData = quizService.findOneQuizForMember(quizId);
+
         QuizStatusResponse response = QuizStatusResponse.builder()
+                .sendTime(now.toString())
                 .quizId(quizId)
                 .command(SHOW_COMMAND)
                 .status(QuizStatus.QUIZ_ON)

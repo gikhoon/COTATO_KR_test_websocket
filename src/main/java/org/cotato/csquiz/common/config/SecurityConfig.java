@@ -1,12 +1,11 @@
 package org.cotato.csquiz.common.config;
 
-import lombok.RequiredArgsConstructor;
 import org.cotato.csquiz.common.config.filter.JwtAuthenticationFilter;
 import org.cotato.csquiz.common.config.filter.JwtAuthorizationFilter;
 import org.cotato.csquiz.common.config.filter.JwtExceptionFilter;
 import org.cotato.csquiz.common.config.jwt.JwtTokenProvider;
 import org.cotato.csquiz.common.config.jwt.RefreshTokenRepository;
-import org.cotato.csquiz.common.error.handler.CustomAccessDeniedHandler;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -32,6 +31,7 @@ public class SecurityConfig {
             "/v1/api/generation",
             "/v1/api/session",
             "/websocket/csquiz",
+            "/v1/api/quiz/1",
             "/v2/api/policies"
     };
 
@@ -39,7 +39,6 @@ public class SecurityConfig {
     private final RefreshTokenRepository refreshTokenRepository;
     private final CorsFilter corsFilter;
     private final JwtAuthorizationFilter jwtAuthorizationFilter;
-    private final CustomAccessDeniedHandler customAccessDeniedHandler;
 
     @Bean
     public AuthenticationManager authenticationManager(HttpSecurity httpSecurity) throws Exception {
@@ -53,11 +52,9 @@ public class SecurityConfig {
         AuthenticationManagerBuilder sharedObject = http.getSharedObject(AuthenticationManagerBuilder.class);
         AuthenticationManager authenticationManager = sharedObject.build();
         http.authenticationManager(authenticationManager);
-
         http.cors();
-        http.exceptionHandling(exception ->
-                        exception.accessDeniedHandler(customAccessDeniedHandler));
         http.csrf().disable()
+                .cors().disable()
                 .formLogin().disable()
                 .addFilter(new JwtAuthenticationFilter(authenticationManager, jwtTokenProvider, refreshTokenRepository))
                 .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class)
@@ -87,7 +84,6 @@ public class SecurityConfig {
                         .requestMatchers("/v2/api/attendance").hasAnyRole("ADMIN")
                         .requestMatchers(new AntPathRequestMatcher("/v1/api/socket/token", "POST"))
                         .hasAnyRole("MEMBER", "EDUCATION", "ADMIN")
-                        .requestMatchers("/v2/api/events/attendances").hasAnyRole("MEMBER", "ADMIN", "EDUCATION")
                         .requestMatchers("/v1/api/socket/**").hasAnyRole("EDUCATION", "ADMIN")
                         .anyRequest().authenticated()
                 );
