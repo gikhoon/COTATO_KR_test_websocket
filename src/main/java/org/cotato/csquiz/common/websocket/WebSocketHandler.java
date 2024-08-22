@@ -117,6 +117,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         QuizStatusResponse response = QuizStatusResponse.builder()
                 .sendTime(now.toString())
                 .quizId(quizId)
+                .response(quizData)
                 .command(SHOW_COMMAND)
                 .status(QuizStatus.QUIZ_ON)
                 .start(QuizStatus.QUIZ_OFF)

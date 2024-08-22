@@ -11,6 +11,7 @@ public class QuizStatusResponse {
 
     private QuizStatus status;
     private QuizStatus start;
+    private QuizResponse response;
     private Long quizId;
     private String command;
     private String sendTime;
